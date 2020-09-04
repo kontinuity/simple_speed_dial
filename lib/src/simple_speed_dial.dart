@@ -115,7 +115,7 @@ class _SpeedDialState extends State<SpeedDial> with SingleTickerProviderStateMix
                             padding: const EdgeInsets.only(right: 16.0 - 4.0),
                             child: Card(
                               elevation: 6.0,
-                              color: Colors.white,
+                              color: Theme.of(context).cardColor,
                               child: Padding(
                                 padding: const EdgeInsets.only(
                                   left: 16.0,
