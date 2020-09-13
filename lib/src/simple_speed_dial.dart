@@ -120,8 +120,11 @@ class _SpeedDialState extends State<SpeedDial> with TickerProviderStateMixin {
                             Padding(
                               padding: const EdgeInsets.only(right: 16.0 - 4.0),
                               child: Card(
-                                elevation: 0.0,
+                                elevation: 3.0,
                                 color: Theme.of(context).cardColor,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(17.5),
+                                ),
                                 child: Container(
                                   decoration: BoxDecoration(
                                     borderRadius: const BorderRadius.all(Radius.circular(17.5)),
