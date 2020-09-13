@@ -12,6 +12,7 @@ class SpeedDial extends StatefulWidget {
     this.openForegroundColor,
     this.closedBackgroundColor,
     this.openBackgroundColor,
+    this.backgroundGradient,
   });
 
   final Widget child;
@@ -30,39 +31,32 @@ class SpeedDial extends StatefulWidget {
 
   final Color openBackgroundColor;
 
+  final Gradient backgroundGradient;
+
   @override
   State<StatefulWidget> createState() {
     return _SpeedDialState();
   }
 }
 
-class _SpeedDialState extends State<SpeedDial> with SingleTickerProviderStateMixin {
+class _SpeedDialState extends State<SpeedDial> with TickerProviderStateMixin {
   AnimationController _animationController;
-  Animation<Color> _backgroundColorAnimation;
-  Animation<Color> _foregroundColorAnimation;
+  Animation<double> _iconRotateAnimation;
   final List<Animation<double>> _speedDialChildAnimations = <Animation<double>>[];
 
   @override
   void initState() {
-    _animationController =
-        widget.controller ?? AnimationController(vsync: this, duration: const Duration(milliseconds: 450));
+    _animationController = widget.controller ?? AnimationController(duration: const Duration(milliseconds: 150), vsync: this);
+    print(_animationController);
     _animationController.addListener(() {
       if (mounted) {
         setState(() {});
       }
     });
 
-    _backgroundColorAnimation = ColorTween(
-      begin: widget.closedBackgroundColor,
-      end: widget.openBackgroundColor,
-    ).animate(_animationController);
+    _iconRotateAnimation = Tween<double>(begin: 0.0, end: 0.75).animate(_animationController);
 
-    _foregroundColorAnimation = ColorTween(
-      begin: widget.closedForegroundColor,
-      end: widget.openForegroundColor,
-    ).animate(_animationController);
-
-    final double fractionOfOneSpeedDialChild = 1.0 / widget.speedDialChildren.length;
+    final double fractionOfOneSpeedDialChild = 1 / widget.speedDialChildren.length;
     for (int speedDialChildIndex = 0; speedDialChildIndex < widget.speedDialChildren.length; ++speedDialChildIndex) {
       final List<TweenSequenceItem<double>> tweenSequenceItems = <TweenSequenceItem<double>>[];
 
@@ -79,8 +73,7 @@ class _SpeedDialState extends State<SpeedDial> with SingleTickerProviderStateMix
         weight: fractionOfOneSpeedDialChild,
       ));
 
-      final double lastWeight =
-          fractionOfOneSpeedDialChild * (widget.speedDialChildren.length - 1 - speedDialChildIndex);
+      final double lastWeight = fractionOfOneSpeedDialChild * (widget.speedDialChildren.length - 1 - speedDialChildIndex);
       if (lastWeight > 0.0) {
         tweenSequenceItems.add(TweenSequenceItem<double>(tween: ConstantTween<double>(1.0), weight: lastWeight));
       }
@@ -89,6 +82,12 @@ class _SpeedDialState extends State<SpeedDial> with SingleTickerProviderStateMix
     }
 
     super.initState();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
   }
 
   @override
@@ -107,49 +106,68 @@ class _SpeedDialState extends State<SpeedDial> with SingleTickerProviderStateMix
               children: widget.speedDialChildren?.map<Widget>((SpeedDialChild speedDialChild) {
                     final Widget speedDialChildWidget = Opacity(
                       opacity: _speedDialChildAnimations[speedDialChildAnimationIndex].value,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: <Widget>[
-                          Padding(
-                            padding: const EdgeInsets.only(right: 16.0 - 4.0),
-                            child: Card(
-                              elevation: 6.0,
-                              color: Theme.of(context).cardColor,
+                      child: GestureDetector(
+                        onTap: () {
+                          if (speedDialChild.closeSpeedDialOnPressed) {
+                            _animationController.reverse();
+                          }
+                          speedDialChild.onPressed?.call();
+                        },
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: <Widget>[
+                            Padding(
+                              padding: const EdgeInsets.only(right: 16.0 - 4.0),
+                              child: Card(
+                                elevation: 0.0,
+                                color: Theme.of(context).cardColor,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius: const BorderRadius.all(Radius.circular(17.5)),
+                                    gradient: speedDialChild.backgroundGradient,
+                                  ),
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(
+                                      left: 16.0,
+                                      right: 16.0,
+                                      top: 8.0,
+                                      bottom: 8.0,
+                                    ),
+                                    child: Text(
+                                      speedDialChild.label,
+                                      style: widget.labelsStyle,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            ScaleTransition(
+                              scale: _speedDialChildAnimations[speedDialChildAnimationIndex],
                               child: Padding(
-                                padding: const EdgeInsets.only(
-                                  left: 16.0,
-                                  right: 16.0,
-                                  top: 8.0,
-                                  bottom: 8.0,
-                                ),
-                                child: Text(
-                                  speedDialChild.label,
-                                  style: widget.labelsStyle,
+                                padding: const EdgeInsets.symmetric(vertical: 4.0),
+                                child: FloatingActionButton(
+                                  heroTag: speedDialChildAnimationIndex,
+                                  mini: true,
+                                  child: FractionallySizedBox(
+                                    widthFactor: 1.0,
+                                    heightFactor: 1.0,
+                                    child: Container(
+                                      decoration: BoxDecoration(shape: BoxShape.circle, gradient: speedDialChild.backgroundGradient),
+                                      child: speedDialChild.child,
+                                    ),
+                                  ),
+                                  onPressed: () {
+                                    if (speedDialChild.closeSpeedDialOnPressed) {
+                                      _animationController.reverse();
+                                    }
+                                    speedDialChild.onPressed?.call();
+                                  },
                                 ),
                               ),
                             ),
-                          ),
-                          ScaleTransition(
-                            scale: _speedDialChildAnimations[speedDialChildAnimationIndex],
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 4.0),
-                              child: FloatingActionButton(
-                                heroTag: speedDialChildAnimationIndex,
-                                mini: true,
-                                child: speedDialChild.child,
-                                foregroundColor: speedDialChild.foregroundColor,
-                                backgroundColor: speedDialChild.backgroundColor,
-                                onPressed: () {
-                                  if (speedDialChild.closeSpeedDialOnPressed) {
-                                    _animationController.reverse();
-                                  }
-                                  speedDialChild.onPressed?.call();
-                                },
-                              ),
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     );
                     speedDialChildAnimationIndex++;
@@ -161,9 +179,14 @@ class _SpeedDialState extends State<SpeedDial> with SingleTickerProviderStateMix
         Padding(
           padding: const EdgeInsets.only(top: 8.0),
           child: FloatingActionButton(
-            child: widget.child,
-            foregroundColor: _foregroundColorAnimation.value,
-            backgroundColor: _backgroundColorAnimation.value,
+            child: FractionallySizedBox(
+              widthFactor: 1.0,
+              heightFactor: 1.0,
+              child: Container(
+                decoration: BoxDecoration(shape: BoxShape.circle, gradient: widget.backgroundGradient),
+                child: Transform.rotate(angle: _iconRotateAnimation.value, child: widget.child),
+              ),
+            ),
             onPressed: () {
               if (_animationController.isDismissed) {
                 _animationController.forward();
